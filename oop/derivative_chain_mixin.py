@@ -7,13 +7,7 @@ NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-# main function for type coercion
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
@@ -66,27 +60,19 @@ class DifferentiableFunction:
     plt.show()
 
   def __add__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction + other: FunctionType"
     return Add(self, other)
 
   __radd__ = __add__
 
   def __mul__(self, other: FunctionType) -> 'Multiply':
-    "self: DifferentialFunction * other: FunctionType"
     return Multiply(self, other)
 
   __rmul__ = __mul__
 
   def __sub__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction - other: FunctionType"
     return self + (-1) * other
 
   def __rsub__(self, other: NumericType) -> 'Add':
-    """
-      other: NumericType - self: DifferentialFunction.
-      Here, the -1 has to go in front of self.
-      other - self => self.__rsub__(other).
-    """
     return other + (-1) * self
 
 
