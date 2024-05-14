@@ -17,6 +17,9 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
 class FindRootMixin:
   """ Class that contains one function to find a root. """
 
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+
   def find_root(self, x0=0, **scipykwargs):
     from scipy.optimize import root_scalar
     root, = root_scalar(lambda x: self(x[0]), x0=[x0], **scipykwargs).root
