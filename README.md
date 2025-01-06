@@ -1,4 +1,4 @@
-The GitHub repository for the `Advanced Scientific Programming in Python` course, taught Jochen Hinz.
+The GitHub repository for the `Advanced Scientific Programming in Python` course, taught by Jochen Hinz.
 
 The course is divided into three topics:
 
