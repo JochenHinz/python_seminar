@@ -26,3 +26,5 @@ The course is divided into three topics:
    - Writing a parallelised Python code
    - Using Numba for JIT compilation
    - Pimping your code with Cython
+
+We additionally discuss static type checking using Mypy.
