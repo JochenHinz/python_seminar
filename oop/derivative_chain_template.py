@@ -1,8 +1,10 @@
+""" [IMPORT] - numpy, plotting, type hinting """
 import numpy as np
 from matplotlib import pyplot as plt
-from typing import Sequence, Tuple, Union, Any, Callable
+from typing import Sequence, Tuple, Union, Any
 
 
+""" [HELPER] - type aliases """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
@@ -114,6 +116,7 @@ class Multiply(DifferentiableFunction):
     return self.f0(x) * self.f1(x)
 
 
+""" [FOCUS] - Your code here """
 class ChainRule(DifferentiableFunction):
   # All functions that are subject to the chain rule: d(f(g)) = df(g) * dg
   pass
@@ -131,6 +134,7 @@ class Cos(ChainRule):
   pass
 
 
+""" [HELPER] - validate by solving a differential equation """
 def test():
   # Total time interval
   T = 10

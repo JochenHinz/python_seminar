@@ -1,3 +1,4 @@
+""" [IMPORT] """
 import numpy as np
 from matplotlib import pyplot as plt
 from typing import Sequence, Tuple, Union, Any, Callable
@@ -7,6 +8,7 @@ from collections.abc import Hashable
 from functools import lru_cache
 
 
+""" [HELPER] """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
@@ -21,8 +23,11 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
+""" [/HELPER] """
 
 
+""" [NEW] - main scope cached first order derivative
+           function called in `DifferentiableFunction.derivative()` """
 @lru_cache
 def _derivative(self: 'DifferentiableFunction') -> 'DifferentiableFunction':
   """
@@ -55,6 +60,7 @@ class DifferentiableFunction(Hashable):
   def _deriv(self):
     pass
 
+  """ [NEW] - called `cached` first order derivative repeatedly """
   def derivative(self, n: int = 1) -> 'DifferentiableFunction':
     assert (n := int(n)) >= 0
     if n == 0:
@@ -179,11 +185,13 @@ class Cos(ChainRule):
   df = lambda self, argument: (-1) * Sin(argument)
 
 
-# We define a class that passes a Sequence of non-hashable types as `args`
-# to `super().__init__(self, args)`.
-# Since we annotated `args` as a `Sequence[Hashable]`, static type checking will complain.
+""" [NEW] - We define a class that passes a Sequence of non-hashable types as `args`
+            to `super().__init__(self, args)`.
+            Since we annotated `args` as a `Sequence[Hashable]`, static type
+            checking will complain. """
 class BrokenClass(DifferentiableFunction):
 
+  """ [FOCUS] - pass a non-hashable list [1, 2, 3] as sole argument to super().__init__ """
   def __init__(self) -> None:
     super().__init__([[1, 2, 3]])
 
@@ -194,6 +202,7 @@ class BrokenClass(DifferentiableFunction):
     return 0.0
 
 
+""" [HELPER] - solve PDE as before """
 def test():
   """
     The differential equation:

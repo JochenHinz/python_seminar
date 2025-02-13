@@ -1,13 +1,15 @@
+""" [IMPORT] - numpy, plotting, type hinting """
 import numpy as np
 from matplotlib import pyplot as plt
 from typing import Sequence, Tuple, Union, Any, Callable
 
 
+""" [HELPER] - type aliases """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-# main function for type coercion
+""" [HELPER] - main function for type coercion """
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
   """
     func is a DifferentialFunction => return func,
@@ -46,27 +48,19 @@ class DifferentiableFunction:
     plt.show()
 
   def __add__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction + other: FunctionType"
     return Add(self, other)
 
   __radd__ = __add__
 
   def __mul__(self, other: FunctionType) -> 'Multiply':
-    "self: DifferentialFunction * other: FunctionType"
     return Multiply(self, other)
 
   __rmul__ = __mul__
 
   def __sub__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction - other: FunctionType"
     return self + (-1) * other
 
   def __rsub__(self, other: NumericType) -> 'Add':
-    """
-      other: NumericType - self: DifferentialFunction.
-      Here, the -1 has to go in front of self.
-      other - self => self.__rsub__(other).
-    """
     return other + (-1) * self
 
 
@@ -123,6 +117,7 @@ class Multiply(DifferentiableFunction):
     return self.f0(x) * self.f1(x)
 
 
+""" [FOCUS] - Chain Rule """
 class ChainRule(DifferentiableFunction):
   # All functions that are subject to the chain rule: d(f(g)) = df(g) * dg
 
@@ -140,6 +135,7 @@ class ChainRule(DifferentiableFunction):
     return self.evalf(self.argument(x))
 
 
+""" [FOCUS] - Specific functions """
 class Exp(ChainRule):
   evalf = np.exp
   df = lambda self, argument: self

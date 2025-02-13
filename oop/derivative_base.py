@@ -1,13 +1,15 @@
+""" [IMPORT] - numpy, plotting, type hinting """
 import numpy as np
 from matplotlib import pyplot as plt
 from typing import Sequence, Tuple, Union, Any
 
 
+""" [HELPER] - type aliases """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-# main function for type coercion
+""" [HELPER] - main function for type coercion """
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
   """
     func is a DifferentialFunction => return func,
@@ -19,16 +21,18 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
   return Constant(func)
 
 
-# I am a template for other differentiable functions
+# Base class for all differentiable functions.
 class DifferentiableFunction:
 
   def __init__(self, args: Sequence[Any]) -> None:
     # Store all arguments that characterise the class. This will come in handy later.
     self._args = tuple(args)
 
+  """ [NEW] - throw informative error message """
   def __call__(self, x: NumericType):
     raise NotImplementedError("Each derived class needs to implement its call behaviour.")
 
+  """ [NEW] - throw informative error message """
   def _deriv(self):
     raise NotImplementedError("Each derived class needs to implement its derivative.")
 
@@ -47,33 +51,42 @@ class DifferentiableFunction:
     plt.plot(x, y)
     plt.show()
 
+  """ [NEW] - addition in the base class """
   def __add__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction + other: FunctionType"
     return Add(self, other)
 
-  # if we invoke other: NumericType + self: DifferentiableFunction,
-  # python will not know how to add `self` to `other`. Then python will check if
-  # `self` implements __radd__.
-  # It does ! and we simply return self + other (addition is commutative).
-  # In this case `other` is coerced to Constant(other) in Add.__init__.
-  __radd__ = __add__
+  """
+  [NEW] - reverse addition in the base class
+  ---------------------------------------
 
+  Suppose we do the following:
+  >>> other = 1
+  >>> self = Constant(2)
+  >>> test = other + self
+
+  Python will not know how to add `other` to `self` because `other is not
+  a DifferentiableFunction. Then python will check if `self` implements __radd__.
+  It does ! and we simply return self + other (addition is commutative).
+  """
+  __radd__ = __add__  # do the same as in __add__
+
+  """ [NEW] - multiplication in the base class """
   def __mul__(self, other: FunctionType) -> 'Multiply':
-    "self: DifferentialFunction * other: FunctionType"
     return Multiply(self, other)
 
-  # idem with other: NumericType * self: DifferentiableFunction
+  """ [NEW] - same as __radd__ """
   __rmul__ = __mul__
 
+  """ [NEW] - subtraction in the base class """
   def __sub__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction - other: FunctionType"
     return self + (-1) * other
 
+  """ [NEW] - reverse subtraction in the base class """
   def __rsub__(self, other: NumericType) -> 'Add':
     """
-      other: NumericType - self: DifferentialFunction.
-      Here, the -1 has to go in front of self.
-      other - self => self.__rsub__(other).
+      >>> other = 1
+      >>> self = Constant(2)
+      >>> test = other - self
     """
     return other + (-1) * self
 
@@ -105,9 +118,11 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
+  """ [NEW] - base class implementation of `__add__`, we can use syntactic sugar """
   def _deriv(self) -> 'Add':
     return self.f0.derivative() + self.f1.derivative()
 
+  """ [NEW] - add coercion in the constructor """
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
@@ -119,9 +134,11 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
+  """ [NEW] - base class implementation arithmetic operations, use syntactic sugar """
   def _deriv(self) -> Add:
     return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
+  """ [NEW] - coercion """
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
@@ -139,6 +156,7 @@ class Exp(DifferentiableFunction):
   def _deriv(self) -> Multiply:
     return self * self.argument.derivative()
 
+  """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
@@ -152,6 +170,7 @@ class Sin(DifferentiableFunction):
   def _deriv(self) -> Multiply:
     return Cos(self.argument) * self.argument.derivative()
 
+  """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
@@ -165,6 +184,7 @@ class Cos(DifferentiableFunction):
   def _deriv(self) -> Multiply:
     return (-1) * Sin(self.argument) * self.argument.derivative()
 
+  """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
@@ -176,6 +196,7 @@ class Cos(DifferentiableFunction):
 #
 
 
+""" [HELPER] - validate by solving a differential equation """
 def test():
   """
     The differential equation:

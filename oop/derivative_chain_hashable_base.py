@@ -1,12 +1,13 @@
+""" [IMPORT] """
 import numpy as np
-from typing import Sequence, Tuple, Union, Any, Callable
+from typing import Sequence, Union, Any, Callable
 
 
+""" [HELPER] """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-# main function for type coercion
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
   """
     func is a DifferentialFunction => return func,
@@ -16,21 +17,26 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
+""" [/HELPER] """
 
 
 class DifferentiableFunction:
 
   def __init__(self, args: Sequence[Any]) -> None:
     self._args = tuple(args)
+
+    """ [NEW] - compute the hash value of the instance and store it """
     self._hash = hash(self._args)  # will fail if an element of `args` is not hashable
 
+  """ [NEW] - make the instance hashable """
   def __hash__(self) -> int:
     return self._hash
 
+  """ [NEW] - make the instance comparable self == other ? """
   def __eq__(self, other: Any) -> bool:
     # class not the same => False, hash not the same => instance._args not the same => False
     # If other doesn't have a hash, there's no problem because the first check will fail.
-    return self.__class__ == other.__class__ and hash(self) == hash(other) and self._args == other._args
+    return self.__class__ is other.__class__ and hash(self) == hash(other) and self._args == other._args
 
   def __add__(self, other: FunctionType) -> 'Add':
     return Add(self, other)
@@ -93,6 +99,7 @@ class Cos(ChainRule):
   df = lambda self, argument: (-1) * Sin(argument)
 
 
+""" [HELPER] - validate """
 def test():
   """
     Test the whether the class instantiations are

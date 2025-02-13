@@ -1,14 +1,16 @@
+""" [IMPORT] - numpy, plotting, type hinting """
 import numpy as np
 from matplotlib import pyplot as plt
 from typing import Sequence, Tuple, Union, Any, Callable
 from abc import ABCMeta, abstractmethod
 
 
+""" [HELPER] - type aliases """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-# main function for type coercion
+""" [HELPER] - main function for type coercion """
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
   """
     func is a DifferentialFunction => return func,
@@ -20,6 +22,7 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
   return Constant(func)
 
 
+""" [NEW] - use the ABCMeta metaclass """
 # setting the so-called metaclass to `ABCMeta`
 # prevents instantiating classes that do not overwrite
 # methods that were tagged as `abstractmethod`.
@@ -28,6 +31,7 @@ class DifferentiableFunction(metaclass=ABCMeta):
   def __init__(self, args: Sequence[Any]) -> None:
     self._args = tuple(args)
 
+  """ [NEW] - tag both `__call__` and `_deriv` as abstract methods """
   @abstractmethod
   def __call__(self, x: NumericType):
     pass
@@ -35,6 +39,7 @@ class DifferentiableFunction(metaclass=ABCMeta):
   @abstractmethod
   def _deriv(self):
     pass
+  """ [/NEW] """
 
   def derivative(self, n: int = 1) -> 'DifferentiableFunction':
     assert (n := int(n)) >= 0
@@ -52,27 +57,19 @@ class DifferentiableFunction(metaclass=ABCMeta):
     plt.show()
 
   def __add__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction + other: FunctionType"
     return Add(self, other)
 
   __radd__ = __add__
 
   def __mul__(self, other: FunctionType) -> 'Multiply':
-    "self: DifferentialFunction * other: FunctionType"
     return Multiply(self, other)
 
   __rmul__ = __mul__
 
   def __sub__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction - other: FunctionType"
     return self + (-1) * other
 
   def __rsub__(self, other: NumericType) -> 'Add':
-    """
-      other: NumericType - self: DifferentialFunction.
-      Here, the -1 has to go in front of self.
-      other - self => self.__rsub__(other).
-    """
     return other + (-1) * self
 
 
@@ -129,7 +126,7 @@ class Multiply(DifferentiableFunction):
     return self.f0(x) * self.f1(x)
 
 
-# Here, instantiating the `ChainRule` class is prevented in the `__init__`
+""" [NEW] - instantiating the `ChainRule` class is prevented in the `__init__` """
 class ChainRule(DifferentiableFunction):
 
   evalf: Callable
@@ -138,6 +135,7 @@ class ChainRule(DifferentiableFunction):
   def _deriv(self) -> DifferentiableFunction:
     return self.df(self.argument) * self.argument.derivative()
 
+  """ [NEW] - throw error if the derived class does not implement `evalf` and `df` """
   def __init__(self, argument: FunctionType) -> None:
     assert all(hasattr(self, item) for item in ('evalf', 'df')), 'Each derived class needs to implement `evalf` and `df`.'
     self.argument = as_function(argument)
