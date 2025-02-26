@@ -9,17 +9,12 @@ FunctionType = Union['DifferentiableFunction', NumericType]
 
 
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
-""" [/HELPER] """
 
 
+""" [HELPER] - base class with all irrelevant methods removed """
 class DifferentiableFunction:
 
   def __init__(self, args: Sequence[Any]) -> None:

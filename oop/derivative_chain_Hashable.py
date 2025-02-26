@@ -15,31 +15,21 @@ FunctionType = Union['DifferentiableFunction', NumericType]
 
 # main function for type coercion
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
-""" [/HELPER] """
 
 
-""" [NEW] - main scope cached first order derivative
-           function called in `DifferentiableFunction.derivative()` """
+""" [NEW] - remember the derivative of a function - called in `_derivative` """
 @lru_cache
 def _derivative(self: 'DifferentiableFunction') -> 'DifferentiableFunction':
   """
-  All our classes are hashable. They can be used in combination with lru_cache.
-  We call this function in DifferentiableFunction.derivative().
   We will never again compute a derivative twice ;-)
   """
   return self._deriv()
 
 
-# inheriting from `Hashable` automatically inherits that
-# metaclass=ABCMeta
+# inheriting from `Hashable` automatically inherits that metaclass=ABCMeta
 class DifferentiableFunction(Hashable):
 
   def __init__(self, args: Sequence[Hashable]) -> None:
@@ -53,11 +43,11 @@ class DifferentiableFunction(Hashable):
     return self.__class__ == other.__class__ and hash(self) == hash(other) and self._args == other._args
 
   @abstractmethod
-  def __call__(self, x: NumericType):
+  def _deriv(self):
     pass
 
   @abstractmethod
-  def _deriv(self):
+  def __call__(self, x: NumericType):
     pass
 
   """ [NEW] - called `cached` first order derivative repeatedly """
@@ -78,38 +68,30 @@ class DifferentiableFunction(Hashable):
     plt.show()
 
   def __add__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction + other: FunctionType"
     return Add(self, other)
 
   __radd__ = __add__
 
   def __mul__(self, other: FunctionType) -> 'Multiply':
-    "self: DifferentialFunction * other: FunctionType"
     return Multiply(self, other)
 
   __rmul__ = __mul__
 
   def __sub__(self, other: FunctionType) -> 'Add':
-    "self: DifferentialFunction - other: FunctionType"
     return self + (-1) * other
 
   def __rsub__(self, other: NumericType) -> 'Add':
-    """
-      other: NumericType - self: DifferentialFunction.
-      Here, the -1 has to go in front of self.
-      other - self => self.__rsub__(other).
-    """
     return other + (-1) * self
 
 
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
@@ -117,11 +99,11 @@ class Constant(DifferentiableFunction):
 
 class Argument(DifferentiableFunction):
 
-  def _deriv(self) -> Constant:
-    return Constant(1)
-
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
@@ -129,12 +111,12 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0, self.f1 = sorted(map(as_function, (f0, f1)), key=lambda x: (x.__class__.__name__, hash(x)))
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
@@ -142,12 +124,12 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0, self.f1 = sorted(map(as_function, (f0, f1)), key=lambda x: (x.__class__.__name__, hash(x)))
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
@@ -158,13 +140,13 @@ class ChainRule(DifferentiableFunction):
   evalf: Callable
   df: Callable
 
-  def _deriv(self) -> DifferentiableFunction:
-    return self.df(self.argument) * self.argument.derivative()
-
   def __init__(self, argument: FunctionType) -> None:
     assert all(hasattr(self, item) for item in ('evalf', 'df')), 'Each derived class needs to implement `evalf` and `df`.'
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> DifferentiableFunction:
+    return self.df(self.argument) * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.evalf(self.argument(x))
@@ -186,14 +168,14 @@ class Cos(ChainRule):
 
 
 """ [NEW] - We define a class that passes a Sequence of non-hashable types as `args`
-            to `super().__init__(self, args)`.
+            to `DifferentiableFunction.__init__(self, args)`.
             Since we annotated `args` as a `Sequence[Hashable]`, static type
             checking will complain. """
 class BrokenClass(DifferentiableFunction):
 
   """ [FOCUS] - pass a non-hashable list [1, 2, 3] as sole argument to super().__init__ """
   def __init__(self) -> None:
-    super().__init__([[1, 2, 3]])
+    super().__init__( [[1, 2, 3]] )
 
   def _deriv(self) -> DifferentiableFunction:
     return Constant(0)

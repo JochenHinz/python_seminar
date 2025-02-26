@@ -5,25 +5,18 @@ from typing import Sequence, Tuple, Union, Any, Callable
 from abc import ABCMeta, abstractmethod
 
 
-""" [HELPER] - type aliases """
+""" [HELPER] - type aliases, function coercion """
 NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-""" [HELPER] - main function for type coercion """
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
 
 
 """ [NEW] - use the ABCMeta metaclass """
-# setting the so-called metaclass to `ABCMeta`
 # prevents instantiating classes that do not overwrite
 # methods that were tagged as `abstractmethod`.
 class DifferentiableFunction(metaclass=ABCMeta):
@@ -31,13 +24,13 @@ class DifferentiableFunction(metaclass=ABCMeta):
   def __init__(self, args: Sequence[Any]) -> None:
     self._args = tuple(args)
 
-  """ [NEW] - tag both `__call__` and `_deriv` as abstract methods """
+  """ [NEW] - tag both `_deriv` and `__call__` as abstract methods """
   @abstractmethod
-  def __call__(self, x: NumericType):
+  def _deriv(self):
     pass
 
   @abstractmethod
-  def _deriv(self):
+  def __call__(self, x: NumericType):
     pass
   """ [/NEW] """
 
@@ -75,12 +68,12 @@ class DifferentiableFunction(metaclass=ABCMeta):
 
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
@@ -88,11 +81,11 @@ class Constant(DifferentiableFunction):
 
 class Argument(DifferentiableFunction):
 
-  def _deriv(self) -> Constant:
-    return Constant(1)
-
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
@@ -100,13 +93,13 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
@@ -114,13 +107,13 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
@@ -132,14 +125,14 @@ class ChainRule(DifferentiableFunction):
   evalf: Callable
   df: Callable
 
-  def _deriv(self) -> DifferentiableFunction:
-    return self.df(self.argument) * self.argument.derivative()
-
   """ [NEW] - throw error if the derived class does not implement `evalf` and `df` """
   def __init__(self, argument: FunctionType) -> None:
     assert all(hasattr(self, item) for item in ('evalf', 'df')), 'Each derived class needs to implement `evalf` and `df`.'
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> DifferentiableFunction:
+    return self.df(self.argument) * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.evalf(self.argument(x))

@@ -9,13 +9,8 @@ NumericType = Union[int, float]
 FunctionType = Union['DifferentiableFunction', NumericType]
 
 
-""" [HELPER] - main function for type coercion """
+""" [HELPER] """
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
@@ -26,11 +21,11 @@ class DifferentiableFunction:
   def __init__(self, args: Sequence[Any]) -> None:
     self._args = tuple(args)
 
-  def __call__(self, x: NumericType):
-    raise NotImplementedError("Each derived class needs to implement its call behaviour.")
-
   def _deriv(self):
     raise NotImplementedError("Each derived class needs to implement its derivative.")
+
+  def __call__(self, x: NumericType):
+    raise NotImplementedError("Each derived class needs to implement its call behaviour.")
 
   def derivative(self, n: int = 1) -> 'DifferentiableFunction':
     assert (n := int(n)) >= 0
@@ -66,12 +61,12 @@ class DifferentiableFunction:
 
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
@@ -79,11 +74,11 @@ class Constant(DifferentiableFunction):
 
 class Argument(DifferentiableFunction):
 
-  def _deriv(self) -> Constant:
-    return Constant(1)
-
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
@@ -91,13 +86,13 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
@@ -105,13 +100,13 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
@@ -124,12 +119,12 @@ class ChainRule(DifferentiableFunction):
   evalf: Callable
   df: Callable
 
-  def _deriv(self) -> DifferentiableFunction:
-    return self.df(self.argument) * self.argument.derivative()
-
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> DifferentiableFunction:
+    return self.df(self.argument) * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.evalf(self.argument(x))

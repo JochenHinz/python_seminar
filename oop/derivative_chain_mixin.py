@@ -2,6 +2,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from typing import Sequence, Tuple, Union, Any, Callable
+from abc import ABCMeta, abstractmethod
 
 
 """ [HELPER] - type aliases, function coercion """
@@ -15,13 +16,11 @@ def as_function(func: FunctionType) -> 'DifferentiableFunction':
   return Constant(func)
 
 
-""" [NEW] - Mixin for finding roots """
-# It is best practice to end the class name on `Mixin`
+""" [NEW] - Mixin for finding roots. End the class name on `Mixin` """
 class FindRootMixin:
-  """ Class that contains one function to find a root. """
 
   def __init__(self, *args, **kwargs):
-    """ Whatever arguments, forward them to the next base class in line. """
+    """ Forward all args to next base class """
     super().__init__(*args, **kwargs)
 
   def find_root(self, x0=0, **scipykwargs):
@@ -35,18 +34,20 @@ class FindRootMixin:
 
 
 """ [FOCUS] - By default:
-    1) we assume that the function can't have roots.
+    1) We assume that the function can't have roots.
     2) If it can have roots, we overwrite `find_root` using the Mixin from above. """
-class DifferentiableFunction:
+class DifferentiableFunction(metaclass=ABCMeta):
 
   def __init__(self, args: Sequence[Any]) -> None:
     self._args = tuple(args)
 
-  def __call__(self, x: NumericType):
-    raise NotImplementedError("Each derived class needs to implement its call behaviour.")
-
+  @abstractmethod
   def _deriv(self):
-    raise NotImplementedError("Each derived class needs to implement its derivative.")
+    pass
+
+  @abstractmethod
+  def __call__(self, x: NumericType):
+    pass
 
   """ [NEW] - overwrite this method in case the function can have roots """
   def find_root(self, *args, **kwargs):
@@ -87,58 +88,55 @@ class DifferentiableFunction:
 # Constant ain't got no root (FIXME: unless the value is 0...)
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
 
 
 """ [NEW] - f(x) = x has a root. To overwrite, the Mixin must be inherited from first. """
-# f(x) = x has a root. To overwrite, the Mixin must be inherited from first.
 class Argument(FindRootMixin, DifferentiableFunction):
-
-  def _deriv(self) -> Constant:
-    return Constant(1)
 
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
 
 
 """ [NEW] - the sum of two functions can have roots """
-# Can have roots.
 class Add(FindRootMixin, DifferentiableFunction):
-
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
 
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
 
 
 """ [NEW] - the product of two functions can have roots """
-# Can have roots.
 class Multiply(FindRootMixin, DifferentiableFunction):
-
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
@@ -150,12 +148,12 @@ class ChainRule(DifferentiableFunction):
   evalf: Callable
   df: Callable
 
-  def _deriv(self) -> DifferentiableFunction:
-    return self.df(self.argument) * self.argument.derivative()
-
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> DifferentiableFunction:
+    return self.df(self.argument) * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.evalf(self.argument(x))
@@ -168,14 +166,12 @@ class Exp(ChainRule):
 
 
 """ [NEW] - sin(f(x)) may have roots """
-# has roots
 class Sin(FindRootMixin, ChainRule):
   evalf = np.sin
   df = lambda self, argument: Cos(argument)
 
 
 """ [NEW] - cos(f(x)) may have roots """
-# has roots
 class Cos(FindRootMixin, ChainRule):
   evalf = np.cos
   df = lambda self, argument: (-1) * Sin(argument)
@@ -183,9 +179,6 @@ class Cos(FindRootMixin, ChainRule):
 
 """ [HELPER] - find the root of y(x) = x * sin(x) - 5 """
 def test():
-  """
-    Find the root of y(x) = x * sin(x) - 5.
-  """
 
   x = Argument()
   y = x * Sin(x) - 5

@@ -29,12 +29,12 @@ class DifferentiableFunction:
     self._args = tuple(args)
 
   """ [NEW] - throw informative error message """
-  def __call__(self, x: NumericType):
-    raise NotImplementedError("Each derived class needs to implement its call behaviour.")
-
-  """ [NEW] - throw informative error message """
   def _deriv(self):
     raise NotImplementedError("Each derived class needs to implement its derivative.")
+
+  """ [NEW] - throw informative error message """
+  def __call__(self, x: NumericType):
+    raise NotImplementedError("Each derived class needs to implement its call behaviour.")
 
   def derivative(self, n: int = 1) -> 'DifferentiableFunction':
     assert (n := int(n)) >= 0
@@ -93,12 +93,12 @@ class DifferentiableFunction:
 
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
@@ -106,11 +106,11 @@ class Constant(DifferentiableFunction):
 
 class Argument(DifferentiableFunction):
 
-  def _deriv(self) -> Constant:
-    return Constant(1)
-
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
@@ -118,15 +118,15 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
-  """ [NEW] - base class implementation of `__add__`, we can use syntactic sugar """
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
-
   """ [NEW] - add coercion in the constructor """
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  """ [NEW] - base class implementation of `__add__`, we can use syntactic sugar """
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
@@ -134,15 +134,15 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
-  """ [NEW] - base class implementation arithmetic operations, use syntactic sugar """
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
-
   """ [NEW] - coercion """
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  """ [NEW] - base class implementation arithmetic operations, use syntactic sugar """
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
@@ -153,13 +153,13 @@ class Multiply(DifferentiableFunction):
 
 class Exp(DifferentiableFunction):
 
-  def _deriv(self) -> Multiply:
-    return self * self.argument.derivative()
-
   """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> Multiply:
+    return self * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return np.exp(self.argument(x))
@@ -167,13 +167,13 @@ class Exp(DifferentiableFunction):
 
 class Sin(DifferentiableFunction):
 
-  def _deriv(self) -> Multiply:
-    return Cos(self.argument) * self.argument.derivative()
-
   """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
+
+  def _deriv(self) -> Multiply:
+    return Cos(self.argument) * self.argument.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return np.sin(self.argument(x))
@@ -181,19 +181,16 @@ class Sin(DifferentiableFunction):
 
 class Cos(DifferentiableFunction):
 
-  def _deriv(self) -> Multiply:
-    return (-1) * Sin(self.argument) * self.argument.derivative()
-
   """ [NEW] - coercion """
   def __init__(self, argument: FunctionType) -> None:
     self.argument = as_function(argument)
     super().__init__([self.argument])
 
+  def _deriv(self) -> Multiply:
+    return (-1) * Sin(self.argument) * self.argument.derivative()
+
   def __call__(self, x: NumericType) -> float:
     return np.cos(self.argument(x))
-
-
-#
 
 
 """ [HELPER] - validate by solving a differential equation """

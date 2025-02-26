@@ -11,11 +11,6 @@ FunctionType = Union['DifferentiableFunction', NumericType]
 
 # main function for type coercion
 def as_function(func: FunctionType) -> 'DifferentiableFunction':
-  """
-    func is a DifferentialFunction => return func,
-    func is an int or float => return Constant(func),
-    func is anything else => this method fails.
-  """
   if isinstance(func, DifferentiableFunction):
     return func
   return Constant(func)
@@ -65,12 +60,12 @@ class DifferentiableFunction:
 
 class Constant(DifferentiableFunction):
 
-  def _deriv(self) -> 'Constant':
-    return Constant(0)
-
   def __init__(self, value: NumericType) -> None:
     self.value = float(value)
     super().__init__([self.value])
+
+  def _deriv(self) -> 'Constant':
+    return Constant(0)
 
   def __call__(self, x: NumericType) -> float:
     return self.value
@@ -78,11 +73,11 @@ class Constant(DifferentiableFunction):
 
 class Argument(DifferentiableFunction):
 
-  def _deriv(self) -> Constant:
-    return Constant(1)
-
   def __init__(self) -> None:
     super().__init__([])
+
+  def _deriv(self) -> Constant:
+    return Constant(1)
 
   def __call__(self, x: NumericType) -> float:
     return float(x)
@@ -90,13 +85,13 @@ class Argument(DifferentiableFunction):
 
 class Add(DifferentiableFunction):
 
-  def _deriv(self) -> 'Add':
-    return self.f0.derivative() + self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> 'Add':
+    return self.f0.derivative() + self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) + self.f1(x)
@@ -104,13 +99,13 @@ class Add(DifferentiableFunction):
 
 class Multiply(DifferentiableFunction):
 
-  def _deriv(self) -> Add:
-    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
-
   def __init__(self, f0: FunctionType, f1: FunctionType) -> None:
     self.f0 = as_function(f0)
     self.f1 = as_function(f1)
     super().__init__([self.f0, self.f1])
+
+  def _deriv(self) -> Add:
+    return self.f0.derivative() * self.f1 + self.f0 * self.f1.derivative()
 
   def __call__(self, x: NumericType) -> float:
     return self.f0(x) * self.f1(x)
