@@ -20,7 +20,7 @@ The course is divided into three topics:
    - `classmethod`, `cached_property` and the use of `self.__class__`
    - (Direct and indirect) Inheriting from `numpy.ndarray`. Compatibility with `numpy.ufunc`'s and broadcasting
    - Creative uses of Context Managers
-  
+
 3. The best of two worlds: fast and readable Python
    - Advanced `Numpy` concepts
    - Writing a parallelised Python code
@@ -28,3 +28,11 @@ The course is divided into three topics:
    - Pimping your code with `Cython`
 
 We additionally discuss static type checking using Mypy.
+
+
+There are two supplementary notebooks:
+`preparation.ipynb` and `numpy_vectorization.ipynb`.
+
+These notebooks cover fundamental and intermediate Python concepts and serve as a refresher for the course.
+Please note that this is not a beginner’s course; a certain level of Python proficiency is expected.
+The topics in these supplementary notebooks are considered prerequisite knowledge for the course.
