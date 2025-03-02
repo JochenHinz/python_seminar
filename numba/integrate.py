@@ -1,3 +1,4 @@
+""" [IMPORT] - njit and prange (parallel range) """
 import numpy as np
 from numba import njit, prange
 
@@ -6,6 +7,11 @@ import time
 _ = np.newaxis
 
 
+""" [SETUP] - number of processes to use """
+NPROCS = 6
+
+
+""" [FOCUS] - Parallel and sequential integration of a function over a mesh """
 @njit(cache=True, parallel=True, fastmath=True)
 def _integrate_numba_parallel(f, nelems, weights, points):
   """
@@ -14,11 +20,13 @@ def _integrate_numba_parallel(f, nelems, weights, points):
     inside of a Numba function.
     We can however pass Numba jitted functions `f` as arguments.
   """
-  ret = np.empty((4,), dtype=np.float64)
-  batch_size = nelems // 4
-  for i in prange(4):
+  ret = np.empty((NPROCS,), dtype=np.float64)
+  batch_size = nelems // NPROCS
+
+  # run in parallel
+  for i in prange(NPROCS):
     start = i * batch_size
-    end = (i + 1) * batch_size if i != 3 else nelems
+    end = (i + 1) * batch_size if i != (NPROCS-1) else nelems
 
     val = 0.0
     for j in range(start, end):
@@ -29,16 +37,13 @@ def _integrate_numba_parallel(f, nelems, weights, points):
 
     ret[i] = val
 
-  return ret.sum()
+  return ret.sum()  # sum sequentially
 
 
 @njit(cache=True, fastmath=True)
 def _integrate_numba_sequential(f, nelems, weights, points):
   """
-    We have to pass weights and points because
-    np.polynomial.legendre.leggaus is not available
-    inside of a Numba function.
-    We can however pass Numba jitted functions `f` as arguments.
+    Same as above but sequential
   """
   val = 0.0
   for j in range(0, nelems):
@@ -50,11 +55,15 @@ def _integrate_numba_sequential(f, nelems, weights, points):
   return val
 
 
+# function we gonna integrate
 @njit(cache=True)
 def _sin(x):
  return np.sin(18 * np.pi * x)
 
+ """ [/FOCUS] """
 
+
+""" [HELPER] - Python function that calls sequential or parallel Numba integration """
 def integrate_numba(f, nelems, order, parallel=True):
   points, weights = np.polynomial.legendre.leggauss(order)
   points = (points + 1) / 2
@@ -63,9 +72,12 @@ def integrate_numba(f, nelems, order, parallel=True):
           False: _integrate_numba_sequential}[parallel](f, nelems, weights, points)
 
 
-integrate_numba(_sin, 10, 3, parallel=False)
+print(f"Sequential and parallel outcome is the same ? {np.allclose(integrate_numba(_sin, 10, 3, parallel=False), integrate_numba(_sin, 10, 3, parallel=True))}\n\n\n")
 
-# Run the numba function for several input element sizes sequentially
+
+""" [HELPER] - time sequential and parallel implementations for various mesh sizes """
+
+# sequential
 for power in (2, 3, 5, 6, 7, 8):
   nelems = 10 ** power
   t0 = time.time()
@@ -74,9 +86,10 @@ for power in (2, 3, 5, 6, 7, 8):
   print(f"The sequential Numba implementation with {nelems} elements took {t1 - t0} seconds.\n")
 
 
-integrate_numba(_sin, 10, 3, parallel=True)
+print("\n\n-----------------------------------------------------------------------------\n\n\n")
 
-# Run the numba function for several input element sizes in parallel
+
+# parallel
 for power in (2, 3, 5, 6, 7, 8):
   nelems = 10 ** power
   t0 = time.time()

@@ -1,12 +1,12 @@
+""" [IMPORT] """
 import numpy as np
 from concurrent import futures
 from typing import Callable
 import time
 
 
-### THIS PART IS NOT SO IMPORTANT
+""" [HELPER] - THIS PART IS NOT SO IMPORTANT """
 
-# Sequential integration
 def integrate_sequential(f, nelems, order):
   x = np.linspace(0, 1, nelems + 1)
   grid = np.stack([x[:-1], x[1:]], axis=1)
@@ -32,12 +32,10 @@ def integrate_subgrid(args):
     result += (b - a) * (weights * f((b - a) * points + a, *fargs)).sum()
   return result
 
+""" [/HELPER] """
 
-###
 
-
-### FOCUS ON THIS PART
-
+""" [FOCUS] ON THIS PART """
 
 # Parallel integration using ProcessPoolExecutor
 def integrate_parallel(f: Callable, fargs, nelems: int, nprocs=4, order=3):
@@ -60,19 +58,21 @@ def integrate_parallel(f: Callable, fargs, nelems: int, nprocs=4, order=3):
 
   args = [(f, subgrid, order, fargs) for subgrid in subgrids]
 
+  # compute partial integrals in parallel
   with futures.ProcessPoolExecutor(max_workers=nprocs) as executor:
     results = list(executor.map(integrate_subgrid, args))
 
-  return sum(results)
+  return sum(results)  # sum sequentially
+
+""" [/FOCUS] """
 
 
-###
-
-
+""" [SETUP] - function to integrate """
 def f(x, w):
   return np.sin(w * x)
 
 
+""" [HELPER] - validate """
 def main(nelems=100000, order=3, nprocs=4):
   w = 18 * np.pi
 
