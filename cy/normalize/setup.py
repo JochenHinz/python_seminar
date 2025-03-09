@@ -5,13 +5,22 @@ import numpy
 import os
 
 Cython.Compiler.Options.annotate = True
-# os.environ['CC'] = '/usr/local/Cellar/gcc/13.2.0/bin/gcc-13'
+
+# Force Cython to use GCC instead of Clang
+os.environ['CC'] = '/opt/homebrew/bin/gcc-14'
+os.environ['CXX'] = '/opt/homebrew/bin/g++-14'
 
 ext_modules = [
-      Extension('normalize', ['normalize.pyx'], extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'])
+    Extension(
+        'normalize',
+        ['normalize.pyx'],
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=['-fopenmp']
+    )
 ]
 
-# setup(ext_modules=cythonize("*.pyx", annotate=True),
-#       include_dirs=[numpy.get_include()])
+setup(
+    ext_modules=cythonize(ext_modules, annotate=True),
+    include_dirs=[numpy.get_include()]
+)
 
-setup(ext_modules=cythonize(ext_modules, annotate=True), include_dirs=[numpy.get_include()])

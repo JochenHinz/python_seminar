@@ -83,10 +83,6 @@ def main(nelems=100000, order=3, nprocs=4):
   result_par = integrate_parallel(f, (w,), nelems, nprocs=nprocs, order=order)
   t2 = time.time()
 
-  # Check if sequential and parallel results are equivalent
-  print(f"Parallel and sequential integral is the same? {np.allclose(result_seq, result_par)} \n\n")
-
-  print(f"nprocs = {nprocs}, so we expect a maximum speedup by {nprocs}.\n\n")
   print(f"The sequential implementation took {t1 - t0} seconds.\n\n")
   print(f"The parallel implementation took {t2 - t1} seconds.\n\n")
   print("Parallelisation gives a speedup by a factor of \033[4m{}\033[0m. \n\n".format((t1 - t0) / (t2 - t1)))

@@ -1,3 +1,4 @@
+""" [IMPORT] """
 cimport cython
 from libc.math cimport sqrt
 from cython.parallel cimport prange
@@ -12,12 +13,13 @@ cdef double[:, ::1] _normalize_cy_parallel(double[:, ::1] arr):
     int i, j, shape0, shape1
     double norm
     double[:, ::1] ret
-    
+
   ret = np.empty((arr.shape[0], arr.shape[1]), dtype=np.double)
   shape0, shape1 = arr.shape[0], arr.shape[1]
-  batch_size = shape0 // 4
-  
+
+  """ [FOCUS] - release the GIL """
   with nogil:
+
     # embarassingly parallelise the outer loop
     for i in prange(shape0):
       norm = 0.0
@@ -27,7 +29,7 @@ cdef double[:, ::1] _normalize_cy_parallel(double[:, ::1] arr):
 
       for j in range(shape1):
         ret[i, j] = arr[i, j] / norm
-      
+
   return ret
 
 

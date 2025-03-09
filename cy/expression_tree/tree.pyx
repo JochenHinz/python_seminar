@@ -1,6 +1,7 @@
 # distutils: extra_compile_args = -fopenmp
 # distutils: extra_link_args = -fopenmp
 
+""" [IMPORT] """
 cimport cython
 from cython.parallel cimport prange
 from cython.view cimport array
@@ -15,11 +16,15 @@ cimport numpy as cnp
 import time
 
 
-### Expression constructors
+""" Expression constructors and destructor """
+
+
+""" [HELPER] - various expression constructors """
+
 
 cdef Expression make_ArithmeticOperation(ExpressionType type, Expression* args, int nargs):
   """
-    Construct an :Expression: ret with 
+    Construct an :Expression: ret with
         ret.type = type (must be ADD or MULTIPLY)
         ret.expression.arithmeticOperation.arguments = args and
         ret.expression.arithmeticOperation.nargs = nargs.
@@ -80,14 +85,14 @@ cdef Expression make_Variable(int token):
 cdef Expression make_Function(ExpressionType type, Expression* arg):
   """
     Construct an :Expression: ret with
-    ret.type = type, where type is either EXP, SIN or COS and 
+    ret.type = type, where type is either EXP, SIN or COS and
     ret.expression.function.argument = arg
   """
   cdef:
     Expression ret
     ExpressionUnion expr
     Function func
-  
+
   if not type in (EXP, SIN, COS):
     abort()
 
@@ -116,13 +121,9 @@ cdef Expression make_Exponent(Expression* base, Expression* exponent):
 
   return ret
 
-### 
 
-
+""" [HELPER] - deallocate a variable of type `Expression` """
 cdef void free_Expression(Expression* expression):
-  """
-    Deallocate a variable of type `Expression`.
-  """
   cdef:
     int i
 
@@ -148,9 +149,11 @@ cdef void free_Expression(Expression* expression):
     pass
 
 
-### MATHEMATICAL FUNCTION EVALUATION
+
+""" MATHEMATICAL FUNCTION EVALUATION """
 
 
+""" [FOCUS] - Evaluate a mathematical expression """
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.initializedcheck(False)
@@ -198,6 +201,7 @@ cdef double eval_expression(Expression expr, double[:] args) nogil:
     abort()
 
 
+""" [FOCUS] - Evaluate a mathematical expression vectorized (and parallelized) """
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.initializedcheck(False)
@@ -223,12 +227,11 @@ cdef void eval_expression_vectorized(Expression expr, double[:, ::1] arg, double
       into[i] = eval_expression(expr, arg[i])
 
 
-### 
+
+""" MATH STRING PARSING """
 
 
-### MATH STRING PARSING
-
-
+""" [HELPER] - use sympy to decompose a string into a list of lists of mathematical operations """
 def decompose_expression(expr):
   """
     Given a sympy expression `expr` create a list of lists representing
@@ -255,6 +258,7 @@ def decompose_expression(expr):
       return [ret, []]
 
 
+""" [HELPER] - Convert a list of lists into a Cython expression """
 cdef Expression expression_from_list_of_lists(list lol):
   """
     Convert a list of lists comprised of primitives (strings, floats, ...)
@@ -305,31 +309,25 @@ cdef Expression expression_from_list_of_lists(list lol):
 
 
 
+""" [FOCUS] - use 1) `decompose_expression` and
+                  2) `expression_from_list_of_lists`
+                  to create a Cython expression from a math string """
 cdef Expression parse_math_string(str math_string):
-  """
-    Convert math string to cython expression.
-    To be used in `evaluate_expression_vectorised`.
-  """
-  
+
   # convert math string to sympy object
   sympy_expression = parse_expr(math_string)
-  
+
   # decompost sympy expression into a tree of mathematical operations
   decomposed_expression = decompose_expression(sympy_expression)
-  
+
   # create a cython expression representing the tree
   expr = expression_from_list_of_lists(decomposed_expression)
 
-  # return
   return expr
 
 
-###
 
-
-### MATH STRING EVALUATION FUNCTION, CALLABLE FROM PYTHON
-
-
+""" [FOCUS] - Function to evaluate a mathematical string, callable from pure Python """
 def evaluate_math_string(str math_string, x):
   """
     Evaluate a function by its mathematical string representation.
@@ -356,7 +354,7 @@ def evaluate_math_string(str math_string, x):
   # evaluate cython expression in `x` reshaped to shape (N, n) where `n`
   # is the number of variables. Iterate the result into `into`.
   eval_expression_vectorized(expr, x.reshape(-1, x.shape[-1]), &into[0])
-  
+
   # deallocate cython expression
   free_Expression(&expr)
 
